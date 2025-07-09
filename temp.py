@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 import os
 
-st.title("温度・湿度比較ツール")
+st.title("温度・湿度比較ツール（インタラクティブ表示）")
 st.markdown("""
 #### 複数のCSVファイルを選択して、それぞれの
 1. 最高気温（temp_max）
@@ -43,24 +43,29 @@ if uploaded_files:
     if summary_data:
         summary_df = pd.concat(summary_data)
 
-        def plot_metric(metric, ylabel):
-            plt.figure(figsize=(10, 5))
-            for label in summary_df['label'].unique():
-                subset = summary_df[summary_df['label'] == label]
-                plt.plot(subset['date'], subset[metric], label=label)
-            plt.title(metric.replace('_', ' ').title())
-            plt.xlabel("Date")
-            plt.ylabel(ylabel)
-            plt.legend()
-            plt.grid(True)
-            st.pyplot(plt)
+        def plot_metric_plotly(df, metric, ylabel):
+            fig = px.line(
+                df,
+                x="date",
+                y=metric,
+                color="label",
+                markers=True,
+                labels={
+                    "date": "日付",
+                    metric: ylabel,
+                    "label": "ファイル"
+                },
+                title=f"{ylabel} の日別推移"
+            )
+            fig.update_layout(hovermode="x unified")
+            st.plotly_chart(fig, use_container_width=True)
 
-        st.subheader("📊 グラフ表示")
-        plot_metric('temp_max', 'Max Temperature (°C)')
-        plot_metric('temp_min', 'Min Temperature (°C)')
-        plot_metric('temp_avg', 'Avg Temperature (°C)')
-        plot_metric('hum_avg', 'Avg Humidity (%)')
-        plot_metric('hum_min', 'Min Humidity (%)')
-        plot_metric('hum_max', 'Max Humidity (%)')
+        st.subheader("📊 グラフ表示（インタラクティブ）")
+        plot_metric_plotly(summary_df, 'temp_max', '最高気温 (°C)')
+        plot_metric_plotly(summary_df, 'temp_min', '最低気温 (°C)')
+        plot_metric_plotly(summary_df, 'temp_avg', '平均気温 (°C)')
+        plot_metric_plotly(summary_df, 'hum_avg', '平均湿度 (%)')
+        plot_metric_plotly(summary_df, 'hum_min', '最低湿度 (%)')
+        plot_metric_plotly(summary_df, 'hum_max', '最高湿度 (%)')
     else:
         st.warning("有効なデータがありませんでした。")
