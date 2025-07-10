@@ -21,7 +21,7 @@ if uploaded_files:
     summary_data = []
 
     for uploaded_file in uploaded_files:
-        label = os.path.splitext(uploaded_file.name)[0]  # ファイル名をラベルに
+        label = os.path.splitext(uploaded_file.name)[0]
         df = pd.read_csv(uploaded_file)
 
         if 'terminal_date' not in df.columns or 'temperature' not in df.columns or 'humidity' not in df.columns:
@@ -67,5 +67,38 @@ if uploaded_files:
         plot_metric_plotly(summary_df, 'hum_avg', '平均湿度 (%)')
         plot_metric_plotly(summary_df, 'hum_min', '最低湿度 (%)')
         plot_metric_plotly(summary_df, 'hum_max', '最高湿度 (%)')
+
+        # 👇 追加：ファイルが1つだけなら年度ごとの平均気温を重ねて表示
+        if len(uploaded_files) == 1:
+            st.subheader("📅 年ごとの平均気温（temp_avg）の比較")
+
+            df_single = summary_data[0].copy()
+            df_single['date'] = pd.to_datetime(df_single['date'])
+            df_single['year'] = df_single['date'].dt.year
+
+            # 年ごとにデータを分けて重ねる
+            df_by_year = []
+            for year, group in df_single.groupby('year'):
+                temp = group.copy()
+                temp['year_label'] = str(year)
+                temp['day_of_year'] = temp['date'].dt.dayofyear  # x軸に使用
+                df_by_year.append(temp)
+
+            year_df = pd.concat(df_by_year)
+
+            fig = px.line(
+                year_df,
+                x="day_of_year",
+                y="temp_avg",
+                color="year_label",
+                labels={
+                    "day_of_year": "年間通日（Day of Year）",
+                    "temp_avg": "平均気温 (°C)",
+                    "year_label": "年"
+                },
+                title="年ごとの平均気温（通日比較）"
+            )
+            fig.update_layout(hovermode="x unified")
+            st.plotly_chart(fig, use_container_width=True)
     else:
         st.warning("有効なデータがありませんでした。")
