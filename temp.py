@@ -68,23 +68,25 @@ if uploaded_files:
         plot_metric_plotly(summary_df, 'hum_min', '最低湿度 (%)')
         plot_metric_plotly(summary_df, 'hum_max', '最高湿度 (%)')
 
-        # 👇 追加：ファイルが1つだけなら年度ごとの平均気温を重ねて表示
-        if len(uploaded_files) == 1:
-            st.subheader("📅 年ごとの平均気温（temp_avg）の比較")
+        # 👇 追加：すべてのファイルの「年ごとの平均気温（通日比較）」を重ねて表示
+        st.subheader("📅 年ごとの平均気温（temp_avg）の比較（通日）")
 
-            df_single = summary_data[0].copy()
-            df_single['date'] = pd.to_datetime(df_single['date'])
-            df_single['year'] = df_single['date'].dt.year
+        year_data = []
 
-            # 年ごとにデータを分けて重ねる
-            df_by_year = []
-            for year, group in df_single.groupby('year'):
-                temp = group.copy()
-                temp['year_label'] = str(year)
-                temp['day_of_year'] = temp['date'].dt.dayofyear  # x軸に使用
-                df_by_year.append(temp)
+        for grouped_df in summary_data:
+            label = grouped_df['label'].iloc[0]
+            temp_df = grouped_df.copy()
+            temp_df['date'] = pd.to_datetime(temp_df['date'])
+            temp_df['year'] = temp_df['date'].dt.year
+            temp_df['day_of_year'] = temp_df['date'].dt.dayofyear
 
-            year_df = pd.concat(df_by_year)
+            for year, year_group in temp_df.groupby('year'):
+                g = year_group.copy()
+                g['year_label'] = f"{label}_{year}"
+                year_data.append(g)
+
+        if year_data:
+            year_df = pd.concat(year_data)
 
             fig = px.line(
                 year_df,
@@ -94,11 +96,12 @@ if uploaded_files:
                 labels={
                     "day_of_year": "年間通日（Day of Year）",
                     "temp_avg": "平均気温 (°C)",
-                    "year_label": "年"
+                    "year_label": "ファイル_年"
                 },
                 title="年ごとの平均気温（通日比較）"
             )
             fig.update_layout(hovermode="x unified")
             st.plotly_chart(fig, use_container_width=True)
+
     else:
         st.warning("有効なデータがありませんでした。")
